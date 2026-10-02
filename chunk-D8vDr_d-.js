@@ -1,0 +1,1 @@
+import{jn as jb}from"./chunk-DWCFsZSu.js";import{t as $e,x as I}from"./chunk-DSXuxjXw.js";var d=`concealed`;var r=class extends I{};r=jb([$e(`board-stash`)],r);function l(o){if(!o)return null;for(let t of o.children)if(t instanceof r)return t;return null}export{l as n,r,d as t};
