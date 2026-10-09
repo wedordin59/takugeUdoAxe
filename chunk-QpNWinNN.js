@@ -1,0 +1,1 @@
+import{bt as f}from"./chunk-B9xQr1eG.js";function a(e,r){return r===f.GameMaster?!0:r===f.Guest?e.guestCanView:e.plCanView}function u(e,r){return e.isSystemTab?!1:r===f.GameMaster?!0:r===f.Guest?e.guestCanSpeak:e.plCanSpeak}export{u as n,a as t};
