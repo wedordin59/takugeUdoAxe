@@ -1,0 +1,1 @@
+import"./chunk-zIqBtW8h.js";import{t as r}from"./chunk-DN56IrFU.js";import"./bcdice-loader-DA-sGP6X.js";var p={"Bloodorium.ja_jp":{ja_jp:{Bloodorium:{triumph:`《トライアンフ》(*%{triumph})`}}},"Bloodorium.ko_kr":{ko_kr:{Bloodorium:{triumph:`《트라이엄프》(*%{triumph})`}}}};r(p);export{p as TRANSLATIONS};

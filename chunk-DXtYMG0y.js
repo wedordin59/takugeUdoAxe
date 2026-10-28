@@ -1,0 +1,1 @@
+import{_ as ui,d as ei}from"./chunk-BM_a9cZ4.js";var i={dissolve:`dissolve`,bisect:`bisect`,gore:`flinch`};function n(e){return i[e]??``}function s(e){return e===`dissolve`?ei:e===`bisect`?ui:1}export{s as n,n as t};

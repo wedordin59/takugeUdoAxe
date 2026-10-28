@@ -1,0 +1,1 @@
+import{_ as o}from"./chunk-55WdLmTZ.js";function a(e,r){return r===o.GameMaster?!0:r===o.Guest?e.guestCanView:e.plCanView}function u(e,r){return e.isSystemTab?!1:r===o.GameMaster?!0:r===o.Guest?e.guestCanSpeak:e.plCanSpeak}export{u as n,a as t};

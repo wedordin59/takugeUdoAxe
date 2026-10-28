@@ -1,0 +1,1 @@
+import{t as a}from"./chunk-BayhFsqs.js";var n=new a;export{n as t};

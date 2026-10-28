@@ -1,0 +1,1 @@
+import{Ui as nm,Zr as gf,za as x}from"./chunk-B9mK0O-d.js";import{t as j}from"./chunk-D3GoO-uz.js";import{at as p}from"./main-C2VC33MU.js";function l(){let o=x(p,{optional:!0});if(!o)return;let n=x(j);gf(()=>{n.canEditTabletop()||nm(()=>o.close())})}export{l as t};
