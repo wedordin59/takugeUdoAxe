@@ -1,0 +1,154 @@
+name: Deploy Udonarium Axe
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'axe-version.txt'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      UPSTREAM_REPO: Xelltis/udonarium_axe
+      BACKEND_URL: ${{ vars.BACKEND_URL }}
+      FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate repository variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKEND_URL}" ]; then
+            echo "BACKEND_URL is not configured."
+            exit 1
+          fi
+          if [ -z "${FRONTEND_ORIGIN}" ]; then
+            echo "FRONTEND_ORIGIN is not configured."
+            exit 1
+          fi
+
+      - name: Read deployment version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\r\n ' < axe-version.txt)"
+          if [ -z "${VERSION}" ]; then
+            echo "axe-version.txt is empty."
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Deploy version: ${VERSION}"
+
+      - name: Download release
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          rm -rf /tmp/axe-release /tmp/axe-extract _site
+          mkdir -p /tmp/axe-release /tmp/axe-extract _site
+          gh release download "${VERSION}" --repo "${UPSTREAM_REPO}" --pattern 'axe_*.zip' --dir /tmp/axe-release
+          ZIP_FILE="$(find /tmp/axe-release -maxdepth 1 -type f -name 'axe_*.zip' | head -n 1)"
+          if [ -z "${ZIP_FILE}" ]; then
+            echo "Release ZIP was not found."
+            exit 1
+          fi
+          unzip -q "${ZIP_FILE}" -d /tmp/axe-extract
+          if [ -f /tmp/axe-extract/index.html ]; then
+            cp -a /tmp/axe-extract/. _site/
+          else
+            SITE_ROOT="$(find /tmp/axe-extract -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+            if [ -z "${SITE_ROOT}" ] || [ ! -f "${SITE_ROOT}/index.html" ]; then
+              echo "index.html was not found in the release archive."
+              exit 1
+            fi
+            cp -a "${SITE_ROOT}/." _site/
+          fi
+
+      - name: Configure backend URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f _site/assets/config.json ]; then
+            echo "assets/config.json was not found."
+            exit 1
+          fi
+          jq empty _site/assets/config.json
+          jq --arg url "${BACKEND_URL}" '.backend.url = $url' _site/assets/config.json > /tmp/config.json
+          mv /tmp/config.json _site/assets/config.json
+          jq -e --arg url "${BACKEND_URL}" '.backend.url == $url' _site/assets/config.json > /dev/null
+
+      - name: Validate static files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f _site/index.html
+          test -f _site/assets/config.json
+          if grep -q 'http://localhost:3000' _site/assets/config.json; then
+            echo "localhost backend URL remains in config.json."
+            exit 1
+          fi
+
+      - name: Validate backend and CORS
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEADER_FILE="/tmp/backend-headers.txt"
+          BODY_FILE="/tmp/backend-body.txt"
+          HTTP_CODE="$(curl -sS -D "${HEADER_FILE}" -o "${BODY_FILE}" -w '%{http_code}' -H "Origin: ${FRONTEND_ORIGIN}" "${BACKEND_URL}/v1/status")"
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "Backend returned HTTP ${HTTP_CODE}"
+            cat "${BODY_FILE}"
+            exit 1
+          fi
+          if [ "$(tr -d '\r\n' < "${BODY_FILE}")" != "OK" ]; then
+            echo "Unexpected backend response."
+            cat "${BODY_FILE}"
+            exit 1
+          fi
+          ALLOW_ORIGIN="$(awk 'BEGIN { IGNORECASE=1 } /^Access-Control-Allow-Origin:/ { sub(/\r$/, ""); sub(/^[^:]+:[[:space:]]*/, ""); print }' "${HEADER_FILE}" | tail -n 1)"
+          if [ "${ALLOW_ORIGIN}" != "${FRONTEND_ORIGIN}" ]; then
+            echo "CORS mismatch."
+            echo "Expected: ${FRONTEND_ORIGIN}"
+            echo "Actual  : ${ALLOW_ORIGIN}"
+            exit 1
+          fi
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
