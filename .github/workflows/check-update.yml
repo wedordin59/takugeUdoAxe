@@ -1,0 +1,154 @@
+name: Check Udonarium Axe Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *'
+      timezone: 'Asia/Tokyo'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+
+    env:
+      UPSTREAM_REPO: Xelltis/udonarium_axe
+      BACKEND_URL: ${{ vars.BACKEND_URL }}
+      FRONTEND_ORIGIN: ${{ vars.FRONTEND_ORIGIN }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Validate repository variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKEND_URL}" ]; then
+            echo "BACKEND_URL is not configured."
+            exit 1
+          fi
+          if [ -z "${FRONTEND_ORIGIN}" ]; then
+            echo "FRONTEND_ORIGIN is not configured."
+            exit 1
+          fi
+
+      - name: Check latest stable release
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURRENT_VERSION="$(tr -d '\r\n ' < axe-version.txt)"
+          LATEST_VERSION="$(gh api "repos/${UPSTREAM_REPO}/releases/latest" --jq '.tag_name')"
+          echo "Current version: ${CURRENT_VERSION}"
+          echo "Latest version : ${LATEST_VERSION}"
+          echo "current=${CURRENT_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "latest=${LATEST_VERSION}" >> "$GITHUB_OUTPUT"
+          if [ "${CURRENT_VERSION}" = "${LATEST_VERSION}" ]; then
+            echo "update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download and validate candidate release
+        if: steps.version.outputs.update == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.latest }}"
+          rm -rf /tmp/axe-release /tmp/axe-extract
+          mkdir -p /tmp/axe-release /tmp/axe-extract
+          gh release download "${VERSION}" --repo "${UPSTREAM_REPO}" --pattern 'axe_*.zip' --dir /tmp/axe-release
+          ZIP_FILE="$(find /tmp/axe-release -maxdepth 1 -type f -name 'axe_*.zip' | head -n 1)"
+          if [ -z "${ZIP_FILE}" ]; then
+            echo "Release ZIP was not found."
+            exit 1
+          fi
+          unzip -q "${ZIP_FILE}" -d /tmp/axe-extract
+          if [ -f /tmp/axe-extract/index.html ]; then
+            SITE_ROOT="/tmp/axe-extract"
+          else
+            SITE_ROOT="$(find /tmp/axe-extract -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+          fi
+          if [ -z "${SITE_ROOT}" ] || [ ! -f "${SITE_ROOT}/index.html" ]; then
+            echo "index.html was not found."
+            exit 1
+          fi
+          if [ ! -f "${SITE_ROOT}/assets/config.json" ]; then
+            echo "assets/config.json was not found."
+            exit 1
+          fi
+          jq empty "${SITE_ROOT}/assets/config.json"
+          jq --arg url "${BACKEND_URL}" '.backend.url = $url' "${SITE_ROOT}/assets/config.json" > /tmp/config.json
+          jq -e --arg url "${BACKEND_URL}" '.backend.url == $url' /tmp/config.json > /dev/null
+
+      - name: Validate backend and CORS
+        if: steps.version.outputs.update == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEADER_FILE="/tmp/backend-headers.txt"
+          BODY_FILE="/tmp/backend-body.txt"
+          HTTP_CODE="$(curl -sS -D "${HEADER_FILE}" -o "${BODY_FILE}" -w '%{http_code}' -H "Origin: ${FRONTEND_ORIGIN}" "${BACKEND_URL}/v1/status")"
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "Backend returned HTTP ${HTTP_CODE}"
+            cat "${BODY_FILE}"
+            exit 1
+          fi
+          if [ "$(tr -d '\r\n' < "${BODY_FILE}")" != "OK" ]; then
+            echo "Unexpected backend response."
+            cat "${BODY_FILE}"
+            exit 1
+          fi
+          ALLOW_ORIGIN="$(awk 'BEGIN { IGNORECASE=1 } /^Access-Control-Allow-Origin:/ { sub(/\r$/, ""); sub(/^[^:]+:[[:space:]]*/, ""); print }' "${HEADER_FILE}" | tail -n 1)"
+          if [ "${ALLOW_ORIGIN}" != "${FRONTEND_ORIGIN}" ]; then
+            echo "CORS mismatch."
+            echo "Expected: ${FRONTEND_ORIGIN}"
+            echo "Actual  : ${ALLOW_ORIGIN}"
+            exit 1
+          fi
+
+      - name: Create update pull request
+        if: steps.version.outputs.update == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURRENT_VERSION="${{ steps.version.outputs.current }}"
+          LATEST_VERSION="${{ steps.version.outputs.latest }}"
+          BRANCH="bot/update-axe-${LATEST_VERSION}"
+          EXISTING_PR="$(gh pr list --state open --head "${BRANCH}" --json number --jq '.[0].number // empty')"
+          if [ -n "${EXISTING_PR}" ]; then
+            echo "Pull Request #${EXISTING_PR} already exists."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${BRANCH}"
+          printf '%s\n' "${LATEST_VERSION}" > axe-version.txt
+          git add axe-version.txt
+          git commit -m "Update Udonarium Axe to ${LATEST_VERSION}"
+          git push --force --set-upstream origin "${BRANCH}"
+          printf '%s\n' \
+            'Udonarium Axe の更新を自動検知しました。' \
+            '' \
+            "- Current: ${CURRENT_VERSION}" \
+            "- Latest: ${LATEST_VERSION}" \
+            '' \
+            '自動確認済み:' \
+            '- Release ZIP の取得' \
+            '- index.html の存在' \
+            '- assets/config.json の存在と JSON 検証' \
+            '- Backend URL の設定可否' \
+            '- Vercel Backend /v1/status = 200 OK' \
+            '- CORS Origin の一致' \
+            '' \
+            'Release Notes:' \
+            "https://github.com/${UPSTREAM_REPO}/releases/tag/${LATEST_VERSION}" \
+            '' \
+            'Release Notes を確認し、問題がなければ Merge してください。' \
+            > /tmp/pr-body.md
+          gh pr create --base main --head "${BRANCH}" --title "Update Udonarium Axe to ${LATEST_VERSION}" --body-file /tmp/pr-body.md
