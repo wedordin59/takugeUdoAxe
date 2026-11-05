@@ -1,1 +1,0 @@
-function l(u){let e=null;return()=>(e||(e={value:u()},queueMicrotask(()=>e=null)),e.value)}export{l as t};

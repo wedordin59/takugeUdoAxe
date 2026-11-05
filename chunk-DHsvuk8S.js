@@ -1,1 +1,0 @@
-import{Bn as Ut,vt as Ke}from"./chunk-B9mK0O-d.js";import{u as R}from"./chunk-55WdLmTZ.js";var d=`concealed`;var r=class extends Ke{};r=Ut([R(`board-stash`)],r);function l(o){if(!o)return null;for(let t of o.children)if(t instanceof r)return t;return null}export{l as n,r,d as t};

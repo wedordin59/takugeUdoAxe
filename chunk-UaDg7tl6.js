@@ -1,1 +1,0 @@
-import{vi as k,za as x}from"./chunk-B9mK0O-d.js";import{i as je}from"./chunk-B3VdI6wb.js";var a=new k(`TRANSLATE_FN`,{providedIn:`root`,factory:()=>{let n=x(je);return(e,c)=>n.translate(e,c)}});export{a as t};
