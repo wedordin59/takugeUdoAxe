@@ -1,1 +1,0 @@
-var e={MagicPunk:{bad_beat:`失敗(BB)`,jackpot:`成功(JP)`,success:`成功(%<value>d)`}};var j={ja_jp:e};export{j as default,e as ja_jp};

@@ -1,1 +1,0 @@
-var c={Arianrhod:{critical:`크리티컬(+%{dice}D6)`}};var a={ko_kr:c};export{a as default,c as ko_kr};

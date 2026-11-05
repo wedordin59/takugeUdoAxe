@@ -1,1 +1,0 @@
-import{r as C}from"./chunk-Cynoc1UX.js";var n=new C;export{n as t};

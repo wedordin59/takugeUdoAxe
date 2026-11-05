@@ -1,1 +1,0 @@
-import"./chunk-zIqBtW8h.js";import{t as r}from"./chunk-DN56IrFU.js";import"./bcdice-loader-DA-sGP6X.js";var o={"Ventangle.ja_jp":{ja_jp:{Ventangle:{special:`スペシャル`,level_gap:`ギャップボーナス(%<gap>d)`}}},"Ventangle.ko_kr":{ko_kr:{Ventangle:{special:`스페셜`,level_gap:`갭 보너스(%<gap>d)`}}}};r(o);export{o as TRANSLATIONS};

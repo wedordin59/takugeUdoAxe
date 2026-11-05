@@ -1,1 +1,0 @@
-var o={Bloodorium:{triumph:`《トライアンフ》(*%{triumph})`}};var p={ja_jp:o};export{p as default,o as ja_jp};

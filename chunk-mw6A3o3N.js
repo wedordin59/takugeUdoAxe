@@ -1,1 +1,0 @@
-import{p as f}from"./chunk-CSQYivKk.js";var o=/[\s\u3000]+/;function i(t){return f(t).toLowerCase().trim()}function s(t){return i(t).split(o).filter(e=>e.length>0)}function u(t,e){return e.every(n=>t.includes(n))}export{s as n,u as r,i as t};

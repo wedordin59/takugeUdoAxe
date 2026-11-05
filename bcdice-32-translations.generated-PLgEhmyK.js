@@ -1,1 +1,0 @@
-import"./chunk-zIqBtW8h.js";import{t as r}from"./chunk-DN56IrFU.js";import"./bcdice-loader-DA-sGP6X.js";var i={"MagicPunk.ja_jp":{ja_jp:{MagicPunk:{bad_beat:`失敗(BB)`,jackpot:`成功(JP)`,success:`成功(%<value>d)`}}},"MagicPunk.ko_kr":{ko_kr:{MagicPunk:{bad_beat:`실패(BB)`,jackpot:`성공(JP)`,success:`성공(%<value>d)`}}}};r(i);export{i as TRANSLATIONS};

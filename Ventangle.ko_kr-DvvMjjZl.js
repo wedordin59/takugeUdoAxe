@@ -1,1 +1,0 @@
-var l={Ventangle:{special:`스페셜`,level_gap:`갭 보너스(%<gap>d)`}};var g={ko_kr:l};export{g as default,l as ko_kr};

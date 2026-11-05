@@ -1,1 +1,0 @@
-var c={Arianrhod:{critical:`クリティカル(+%{dice}D6)`}};var r={ja_jp:c};export{r as default,c as ja_jp};
